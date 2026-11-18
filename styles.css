@@ -269,6 +269,29 @@ body > main {
   background: var(--desk);
   border-left: 3px solid var(--sel);
 }
+#campus-stores .handover,
+#campus-stores .timeline {
+  margin: 14px 0;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--memo);
+  color: var(--memotxt);
+}
+#campus-stores .handover p,
+#campus-stores .timeline p { margin-top: 7px; }
+#campus-stores .accepted { padding-top: 8px; border-top: 1px solid var(--line); }
+#campus-stores .timeline { background: var(--desk); color: var(--ink); }
+#campus-stores .follow-up {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--mark);
+  background: var(--desk);
+  overflow-wrap: anywhere;
+}
+#campus-stores .follow-up > :not(:first-child) { margin-top: 8px; }
+#campus-stores .follow-up li + li { margin-top: 6px; }
+#campus-stores .follow-up [data-form-error] { color: var(--memotxt); }
 #campus-stores .record p {
   margin-top: 5px;
 }

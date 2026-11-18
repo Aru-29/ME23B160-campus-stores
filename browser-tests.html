@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Campus Stores browser checks</title>
+<pre id="result">Running…</pre>
+<iframe title="Campus Stores test instance" style="width: 320px; height: 640px"></iframe>
+<script>
+  const frame = document.querySelector("iframe");
+  const result = document.querySelector("#result");
+  const errors = [];
+  const page = () => frame.contentDocument;
+  const click = (action, val) => {
+    const selector = `[data-action="${action}"]${val === undefined ? "" : `[data-val="${val}"]`}`;
+    const button = page().querySelector(selector);
+    check(button, "Missing control " + selector);
+    button.click();
+  };
+  const see = (value) => page().body.textContent.includes(value);
+  const registerHas = (slip) => page().querySelector("[data-page]").textContent.includes(slip);
+  const check = (condition, label) => {
+    if (!condition) throw new Error(label);
+  };
+  function submit(selector, values) {
+    const form = page().querySelector(selector);
+    for (const [name, value] of Object.entries(values)) form.elements[name].value = value;
+    check(form.checkValidity(), "Invalid test input for " + selector);
+    form.requestSubmit();
+  }
+  function issue(asset) {
+    click("new");
+    submit("[data-issue]", { req: "RQ-214", asset, who: "Kabir Sen", due: "Fri 8 pm" });
+  }
+  function returnUnit(slip, condition) {
+    click("return", slip);
+    submit("[data-return]", { condition });
+  }
+  function run() {
+    frame.contentWindow.addEventListener("error", (event) => errors.push(event.message));
+    click("restart");
+    click("tab", "Loan register");
+    check(see("MI-09"), "Starting microphone loan");
+    issue("PR-04");
+    issue("SP-02");
+    issue("AD-12");
+    click("advance");
+    returnUnit(403, "Damaged");
+    returnUnit(404, "Good");
+    check(registerHas("L-402") && !registerHas("L-403") && !registerHas("L-404"),
+      "Partial return keeps only the projector open");
+    click("advance");
+    click("tab", "Requests");
+    click("request", "RQ-221");
+    check(see("Overdue") && !page().querySelector("[data-approve]"), "Overdue projector blocks approval");
+    click("tab", "Desk book");
+    check(see("PR-04") && see("Overdue"), "Morning handover shows overdue work");
+    submit("[data-handover]", { owner: "Isha Rao", action: "Follow up on the projector" });
+    click("tab", "Loan register");
+    click("follow-up", 402);
+    submit("[data-follow-up]", {
+      action: "Return promise logged", promise: "Sat 10 am", note: "Kabir promised to bring it back.",
+    });
+    check(see("Awaiting promised return"), "A promise changes follow-up status");
+    click("advance");
+    check(see("Promise missed"), "Missed promise is visible at 10:30");
+    click("follow-up", 402);
+    submit("[data-follow-up]", { action: "Escalated to desk lead", note: "Desk lead will call Kabir." });
+    check(see("Follow-up history (2)") && see("Escalated to desk lead"), "Escalation appends history");
+    check(page().documentElement.scrollWidth <= 320, "Narrow layout fits");
+    returnUnit(402, "Good");
+    click("scope", 1);
+    check(see("Resolved by return") && see("Follow-up history (2)"), "Closure keeps escalation history");
+    click("tab", "Requests");
+    submit("[data-approve]", { asset: "PR-04" });
+    check(see("Reserved unit") && !page().querySelector("[data-approve]"), "Returned projector can be reserved once");
+    click("tab", "Inventory");
+    check(see("Damaged"), "Damaged unit remains held");
+  }
+  const url = "./index.html";
+  frame.addEventListener("load", function first() {
+    try {
+      run();
+      frame.style.width = "1100px";
+      frame.addEventListener("load", () => {
+        try {
+          click("tab", "Requests");
+          check(see("Reserved unit"), "Reservation survives reload");
+          click("tab", "Loan register");
+          check(see("Follow-up history (2)"), "Follow-ups survive reload");
+          check(page().documentElement.scrollWidth <= 1100, "Desktop layout fits");
+          click("restart");
+          click("request", "RQ-221");
+          check(Boolean(page().querySelector("[data-approve]")), "Restart clears saved reservation");
+          submit("[data-approve]", { asset: "PR-04" });
+          click("tab", "Loan register");
+          click("new");
+          submit("[data-issue]", { req: "RQ-214", asset: "PR-04", who: "Kabir Sen", due: "Sat noon" });
+          check(see("This loan overlaps a reservation") && page().querySelector("[data-issue]"),
+            "Issue cannot overlap an approved booking");
+          check(!errors.length, errors.join("\n"));
+          result.textContent = "PASS: scheduling, condition, partial return, handover, escalation, narrow layout, reload, restart";
+        } catch (error) {
+          result.textContent = "FAIL: " + error.message;
+        }
+      }, { once: true });
+      frame.contentWindow.location.reload();
+    } catch (error) {
+      result.textContent = "FAIL: " + error.message;
+    }
+  }, { once: true });
+  frame.src = url;
+</script>
+</html>
